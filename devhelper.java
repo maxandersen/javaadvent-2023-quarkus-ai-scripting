@@ -1,11 +1,13 @@
 ///usr/bin/env jbang "$0" "$@" ; exit $?
 //JAVA 17+
-//PREVIEW
 //JAVAC_OPTIONS -parameters
 
 //DEPS io.quarkus.platform:quarkus-bom:3.6.3@pom
 //DEPS io.quarkiverse.langchain4j:quarkus-langchain4j-openai:0.4.0
 //DEPS io.quarkus:quarkus-picocli
+
+//Q:CONFIG quarkus.langchain4j.openai.timeout=60s
+//  Q:CONFIG quarkus.langchain4j.openai.chat-model.model-name=gpt-4
 
 //Q:CONFIG quarkus.banner.enabled=false
 //Q:CONFIG quarkus.log.level=WARN
@@ -13,9 +15,6 @@
 //Q:CONFIG quarkus.log.category."dev.langchain4j".level=WARN
 //Q:CONFIG quarkus.langchain4j.openai.log-requests=true
 //Q:CONFIG quarkus.langchain4j.openai.log-responses=true
-
-//Q:CONFIG quarkus.langchain4j.openai.chat-model.model-name=gpt-4
-//Q:CONFIG quarkus.langchain4j.openai.timeout=60s
 
 // To run in devmode use this command:
 // `jbang --fresh -Dquarkus.dev -Dquarkus.console.enabled=false devhelper.java`
@@ -60,27 +59,27 @@ public class devhelper implements Runnable {
 		String ask(String question);
 	}
 
-	@Inject
-	ProjectHelper ai;
+@Inject
+ProjectHelper ai;
 
-	@ActivateRequestContext
-	public void run() {
+@ActivateRequestContext
+public void run() {
 
-		while (true) {
-			var scanner = new Scanner(System.in);
-			if (question == null || question.isBlank()) {
-				out.println("Please enter your question:");
-				question = scanner.nextLine();
-				if (Set.of("exit", "quit").contains(question.toLowerCase())) {
-					break;
-				}
+	while (true) {
+		var scanner = new Scanner(System.in);
+		if (question == null || question.isBlank()) {
+			out.println("Please enter your question:");
+			question = scanner.nextLine();
+			if (Set.of("exit", "quit").contains(question.toLowerCase())) {
+				break;
 			}
-			out.println("Thinking...");
-			String answer = ai.ask(question);
-			out.println("Answer: " + answer);
-			question = null;
 		}
+		out.println("Thinking...");
+		String answer = ai.ask(question);
+		out.println("Answer: " + answer);
+		question = null;
 	}
+}
 
 	@ApplicationScoped
 	static class FileManager {
@@ -131,7 +130,7 @@ public class devhelper implements Runnable {
 
 			info("Updating content of file '" + filename + "'");
 
-			Files.createDirectories(Paths.get(filename).getParent());
+			Files.createDirectories(Paths.get(filename).toAbsolutePath().getParent());
 			Files.writeString(Paths.get(filename), content);
 		}
 
@@ -149,16 +148,16 @@ public class devhelper implements Runnable {
 			Files.delete(Paths.get(filename));
 		}
 
-		// Check for '..' in the path to avoid accessing files outside of the project.
-		// Make request to / be the same as a request to . (root of current directory)
-		private String handleDir(String directory) {
-			if (directory.contains("..")) {
-				throw new IllegalArgumentException(
-						"The path cannot contain '..' as it would allow to access files outside of the project.");
-			}
-			directory = (directory == null || directory.isBlank())? "/" : directory;
-			return (directory.startsWith("/"))? directory.substring(1) : directory;
-		}
+// Check for '..' in the path to avoid accessing files outside of the project.
+// Make request to / be the same as a request to . (root of current directory)
+private String handleDir(String directory) {
+	if (directory.contains("..")) {
+		throw new IllegalArgumentException(
+				"The path cannot contain '..' as it would allow to access files outside of the project.");
+	}
+	directory = (directory == null || directory.isBlank())? "/" : directory;
+	return (directory.startsWith("/"))? directory.substring(1) : directory;
+}
 
 		private void userConfirmation(String message, String confirmationQuestion) throws IOException {
 			Scanner scanner = new Scanner(System.in);
